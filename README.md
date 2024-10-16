@@ -1,51 +1,85 @@
-# Symfony Docker
+Docker pour le site de fablab de St Gély
+-----------------------------------------
 
-A [Docker](https://www.docker.com/)-based installer and runtime for the [Symfony](https://symfony.com) web framework,
-with [FrankenPHP](https://frankenphp.dev) and [Caddy](https://caddyserver.com/) inside!
+Un installateur pour simuler l'infrastructure du fablab de St Gély (Dolibarr / OpenLdap / Symfony)
 
-![CI](https://github.com/dunglas/symfony-docker/workflows/CI/badge.svg)
+Basée sur l'environnement d'exécution officiel basés sur [Docker](https://www.docker.com/) pour le framework web [Symfony](https://symfony.com),
+avec [FrankenPHP](https://frankenphp.dev) et [Caddy](https://caddyserver.com/) à l'intérieur !
 
-## Getting Started
+Basé sur https://github.com/dunglas/symfony-docker
 
-1. If not already done, [install Docker Compose](https://docs.docker.com/compose/install/) (v2.10+)
-2. Run `docker compose build --no-cache` to build fresh images
-3. Run `docker compose up --pull always -d --wait` to set up and start a fresh Symfony project
-4. Open `https://localhost` in your favorite web browser and [accept the auto-generated TLS certificate](https://stackoverflow.com/a/15076602/1352334)
-5. Run `docker compose down --remove-orphans` to stop the Docker containers.
+# Mis en place du serveur sur Docker
 
-## Features
+## Prérequis
+NodeJS pour les assets:
+https://nodejs.org/fr
 
-* Production, development and CI ready
-* Just 1 service by default
-* Blazing-fast performance thanks to [the worker mode of FrankenPHP](https://github.com/dunglas/frankenphp/blob/main/docs/worker.md) (automatically enabled in prod mode)
-* [Installation of extra Docker Compose services](docs/extra-services.md) with Symfony Flex
-* Automatic HTTPS (in dev and prod)
-* HTTP/3 and [Early Hints](https://symfony.com/blog/new-in-symfony-6-3-early-hints) support
-* Real-time messaging thanks to a built-in [Mercure hub](https://symfony.com/doc/current/mercure.html)
-* [Vulcain](https://vulcain.rocks) support
-* Native [XDebug](docs/xdebug.md) integration
-* Super-readable configuration
+## Prérequis Extension Visual Studio Code
+Si vous voulez un coup de main de l'IA testez Cursor, c'est Visual Studio Code avec de l'IA intégré : https://www.cursor.com/
 
-**Enjoy!**
+Extensions VS Code:
+* MySQL : cweijan.vscode-mysql-client2
+* LDAP Explorer : fengtan.ldap-explorer
+* PHP Debug : xdebug.php-debug
 
-## Docs
+Pour ldap j'utilise aussi ça : https://github.com/uroesch/LdapAdminPortable/releases/tag/v1.8.3-uroesch
 
-1. [Options available](docs/options.md)
-2. [Using Symfony Docker with an existing project](docs/existing-project.md)
-3. [Support for extra services](docs/extra-services.md)
-4. [Deploying in production](docs/production.md)
-5. [Debugging with Xdebug](docs/xdebug.md)
-6. [TLS Certificates](docs/tls.md)
-7. [Using MySQL instead of PostgreSQL](docs/mysql.md)
-8. [Using Alpine Linux instead of Debian](docs/alpine.md)
-9. [Using a Makefile](docs/makefile.md)
-10. [Updating the template](docs/updating.md)
-11. [Troubleshooting](docs/troubleshooting.md)
 
-## License
+## Installation
+Si ce n'est pas déjà fait, [installez Docker Desktop](https://docs.docker.com/desktop/install/windows-install/)
 
-Symfony Docker is available under the MIT License.
+### Automatique
+Lancer le script **deploy.bat** pour installer le serveur
+Pour ne pas avoir à reset complètement le cache soft_restart.bat
 
-## Credits
+### Manuel
 
-Created by [Kévin Dunglas](https://dunglas.dev), co-maintained by [Maxime Helias](https://twitter.com/maxhelias) and sponsored by [Les-Tilleuls.coop](https://les-tilleuls.coop).
+2. Exécutez `docker compose build --no-cache` pour construire des images fraîches
+3. Exécutez `docker compose up --pull always -d --wait` pour configurer et démarrer l'infrastructure
+4. Ouvrez `https://localhost` dans votre navigateur web préféré et [acceptez le certificat TLS auto-généré](https://stackoverflow.com/a/15076602/1352334)
+5. Exécutez `docker compose down --remove-orphans` pour arrêter les conteneurs Docker.
+
+## Autorisation du certificat local
+Installation de mkcert sur Windows
+```
+winget install FiloSottile.mkcert
+```
+
+Validation local du certificat de test
+
+```
+docker compose cp php:/data/caddy/pki/authorities/local/root.crt %TEMP%/root.crt && certutil -addstore -f "ROOT" %TEMP%/root.crt
+```
+## Structure du Docker
+
+Ce projet utilise Docker pour créer un environnement de développement cohérent et isolé. Voici un aperçu rapide de la structure décrit dans **compose.yaml** / **compose.override.yaml**
+
+- **php** Un conteneur pour FrankenPHP (serveur web optimisé pour PHP)
+- **database** Un conteneur pour la base de données (mariadb )
+- **dolibarr / dolibarr_database** Un conteneur dolibarr et mariadb
+- **openldap** Un conteneur openldap
+
+# Création des assets
+
+```
+npm install
+npm run dev
+```
+
+# Création de la base de données
+
+Pour créer la base de données de l'application, suivez ces étapes :
+
+1. Exécutez la commande Symfony pour créer la base de données :
+   ```
+   php bin/console doctrine:database:create
+   ```
+
+2. Ensuite, créer les tables nécessaires à partir du schéma présent dans src/Entity/:
+   ```
+   php bin/console doctrine:schema:create
+   ```
+
+## Utilisateur
+pierre.paul@gmail.com
+test

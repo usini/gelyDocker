@@ -1,4 +1,4 @@
 worker {
-	file ./public/index.php
+	file /app/src/Controller/HomeController.php
 	env APP_RUNTIME Runtime\FrankenPhpSymfony\Runtime
 }

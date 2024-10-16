@@ -22,6 +22,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 	file \
 	gettext \
 	git \
+	npm \
+	ldap-utils \
+	default-mysql-client \
 	&& rm -rf /var/lib/apt/lists/*
 
 RUN set -eux; \
@@ -39,6 +42,10 @@ ENV COMPOSER_ALLOW_SUPERUSER=1
 ENV PHP_INI_SCAN_DIR=":$PHP_INI_DIR/app.conf.d"
 
 ###> recipes ###
+###> doctrine/doctrine-bundle ###
+RUN install-php-extensions pdo_mysql
+RUN install-php-extensions ldap
+###< doctrine/doctrine-bundle ###
 ###< recipes ###
 
 COPY --link frankenphp/conf.d/10-app.ini $PHP_INI_DIR/app.conf.d/
@@ -46,6 +53,8 @@ COPY --link --chmod=755 frankenphp/docker-entrypoint.sh /usr/local/bin/docker-en
 COPY --link frankenphp/Caddyfile /etc/caddy/Caddyfile
 
 ENTRYPOINT ["docker-entrypoint"]
+
+
 
 HEALTHCHECK --start-period=60s CMD curl -f http://localhost:2019/metrics || exit 1
 CMD [ "frankenphp", "run", "--config", "/etc/caddy/Caddyfile" ]

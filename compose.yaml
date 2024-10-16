@@ -4,20 +4,23 @@ services:
     restart: unless-stopped
     environment:
       SERVER_NAME: ${SERVER_NAME:-localhost}, php:80
-      MERCURE_PUBLISHER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}
-      MERCURE_SUBSCRIBER_JWT_KEY: ${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}
-      # Run "composer require symfony/orm-pack" to install and configure Doctrine ORM
-      DATABASE_URL: postgresql://${POSTGRES_USER:-app}:${POSTGRES_PASSWORD:-!ChangeMe!}@database:5432/${POSTGRES_DB:-app}?serverVersion=${POSTGRES_VERSION:-15}&charset=${POSTGRES_CHARSET:-utf8}
-      # Run "composer require symfony/mercure-bundle" to install and configure the Mercure integration
-      MERCURE_URL: ${CADDY_MERCURE_URL:-http://php/.well-known/mercure}
-      MERCURE_PUBLIC_URL: ${CADDY_MERCURE_PUBLIC_URL:-https://${SERVER_NAME:-localhost}/.well-known/mercure}
-      MERCURE_JWT_SECRET: ${CADDY_MERCURE_JWT_SECRET:-!ChangeThisMercureHubJWTSecretKey!}
-      # The two next lines can be removed after initial installation
       SYMFONY_VERSION: ${SYMFONY_VERSION:-}
       STABILITY: ${STABILITY:-stable}
+      XDEBUG_MODE: "${XDEBUG_MODE:-debug}"
     volumes:
       - caddy_data:/data
       - caddy_config:/config
+      - ./app:/app
+      # Copy env file from docker to symfony application
+      - ./.env:/app/.env
+      - ./frankenphp/Caddyfile:/etc/caddy/Caddyfile:ro
+      - ./frankenphp/conf.d/20-app.dev.ini:/usr/local/etc/php/app.conf.d/20-app.dev.ini:ro
+      # Database dump are availabled in docker git and restore at first deployement (see frankenphp/docker-entrypoint.sh)
+      - ./dump:/app/dump
+      # If you develop on Mac or Windows you can remove the vendor/ directory
+      #  from the bind-mount for better performance by enabling the next line:
+      - /app/vendor
+
     ports:
       # HTTP
       - target: 80
@@ -31,13 +34,102 @@ services:
       - target: 443
         published: ${HTTP3_PORT:-443}
         protocol: udp
+    depends_on:
+      - database
+    build:
+      context: .
+      target: frankenphp_dev
+    extra_hosts:
+      # Ensure that host.docker.internal is correctly defined on Linux
+      - host.docker.internal:host-gateway
+    tty: true
 
 # Mercure is installed as a Caddy module, prevent the Flex recipe from installing another service
 ###> symfony/mercure-bundle ###
 ###< symfony/mercure-bundle ###
 
+###> doctrine/doctrine-bundle ###
+  database:
+    image: mariadb:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: MARIADB_RANDOM_ROOT_PASSWORD
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-app}
+      # You should definitely change the password in production
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-!ChangeMe!}
+      MYSQL_USER: ${MYSQL_USER:-app}
+    healthcheck:
+      test: ["CMD", "mysqladmin" ,"ping", "-h", "localhost"]
+      timeout: 5s
+      retries: 5
+      start_period: 60s
+    volumes:
+      - database:/var/lib/mysql:rw
+      # - ./docker/db/data:/var/lib/mysql:rw
+      # You may use a bind-mounted host directory instead, so that it is harder to accidentally remove the volume and lose all your data!
+      # - ./docker/db/data:/var/lib/postgresql/data:rw
+    ports:
+      - "3307:3306"
+###< doctrine/doctrine-bundle ###
+
+## OpenLDAP
+  openldap:
+    image: bitnami/openldap:2
+    ports:
+      - '1389:389'
+      - '1636:636'
+    environment:
+      LDAP_ADMIN_USERNAME: ${LDAP_ADMIN_USERNAME:-admin}
+      LDAP_ADMIN_PASSWORD: ${LDAP_ADMIN_PASSWORD:-adminpassword}
+      LDAP_ROOT: ${APP_LDAP_BASEDN}
+      LDAP_ADMIN_DN: ${APP_LDAP_SEARCHDN}
+    volumes:
+      # Volumes is backup inside the docker container to simplify deployement
+      - ./services/openldap:/bitnami/openldap/
+
+### Dolibarr
+  database_dolibarr:
+    image: mariadb:latest
+    environment:
+      MYSQL_ROOT_PASSWORD: "!ChangeMe!"
+      MYSQL_DATABASE: dolibarr
+    volumes:
+      - dolibarr_database:/var/lib/mysql
+    ports:
+      - "3308:3306"
+
+  dolibarr:
+    image: dolibarr/dolibarr:latest
+    environment:
+      DOLI_DB_HOST: ${DOLI_DB_HOST:-database_dolibarr}
+      DOLI_DB_USER: ${DOLI_DB_USER:-root}
+      DOLI_DB_PASSWORD: ${DOLI_DB_PASSWORD:-!ChangeMe!}
+      DOLI_DB_NAME: ${DOLI_DB_NAME:-dolibarr}
+      DOLI_ADMIN_LOGIN: 'admin'
+      DOLI_ADMIN_PASSWORD: 'admin'
+      DOLI_URL_ROOT: 'https://localhost'
+      PHP_INI_DATE_TIMEZONE: 'Europe/Paris'
+    volumes:
+      # Dolibarr document are saved inside the docker git
+      - ./services/dolibarr/www/custom:/var/www/html/custom
+      - ./services/dolibarr/www/documents:/var/www/documents
+    ports:
+      - '8888:80'
+    depends_on:
+      - database_dolibarr
+
+### Mail tester app
+  mailer:
+    image: axllent/mailpit
+    ports:
+      - "1025"
+      - "8025"
+    environment:
+      MP_SMTP_AUTH_ACCEPT_ANY: 1
+      MP_SMTP_AUTH_ALLOW_INSECURE: 1
+
 volumes:
   caddy_data:
   caddy_config:
-###> symfony/mercure-bundle ###
-###< symfony/mercure-bundle ###
+  # Database are saved as volumes in the docker, so it is persistent but machine dependant
+  dolibarr_database:
+  database:

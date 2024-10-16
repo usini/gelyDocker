@@ -1,0 +1,57 @@
+# extended LDIF
+#
+# LDAPv3
+# base <dc=my-domain,dc=com> with scope subtree
+# filter: (objectClass=*)
+# requesting: ALL
+#
+
+# my-domain.com
+dn: dc=my-domain,dc=com
+objectClass: dcObject
+objectClass: organization
+dc: my-domain
+o: example
+
+# People, my-domain.com
+dn: ou=People,dc=my-domain,dc=com
+objectClass: organizationalUnit
+ou: People
+
+# Groups, my-domain.com
+dn: ou=Groups,dc=my-domain,dc=com
+objectClass: top
+objectClass: organizationalUnit
+ou: Groups
+
+# Pierre Paul, People, my-domain.com
+dn: cn=Pierre Paul,ou=People,dc=my-domain,dc=com
+objectClass: inetOrgPerson
+userPassword:: e1NIQX1xVXFQNWN5eG02WWNUQWh6MDVIcGg1Z3Z1OU09
+sn: Pierre
+displayName: pierre.paul
+mail: pierre.paul@gmail.com
+title: 0
+uid: 37470e77-28c7-404a-a728-3838c6049ba3
+l: Montpellier
+cn: Pierre Paul
+homePhone: 0555555555
+mobile: 0555555555
+homePostalAddress: Rue du test
+postalCode: 34000
+givenName:: UGllcnJlDQo=
+
+# MEMBER, Groups, my-domain.com
+dn: cn=MEMBER,ou=Groups,dc=my-domain,dc=com
+objectClass: top
+objectClass: groupOfUniqueNames
+uniqueMember: cn=Pierre Paul,ou=People,dc=my-domain,dc=com
+cn: ADMIN_SI
+cn: MEMBER
+
+# search result
+search: 2
+result: 0 Success
+
+# numResponses: 6
+# numEntries: 5
