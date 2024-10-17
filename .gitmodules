@@ -1,0 +1,3 @@
+[submodule "gelyCode"]
+	path = gelyCode
+	url = https://github.com/usini/gelyCode
