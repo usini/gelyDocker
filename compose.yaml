@@ -74,9 +74,6 @@ services:
 ## OpenLDAP
   openldap:
     image: bitnami/openldap:2
-    ports:
-      - '1389:389'
-      - '1636:636'
     environment:
       LDAP_ADMIN_USERNAME: ${LDAP_ADMIN_USERNAME:-admin}
       LDAP_ADMIN_PASSWORD: ${LDAP_ADMIN_PASSWORD:-adminpassword}
@@ -85,6 +82,9 @@ services:
     volumes:
       # Volumes is backup inside the docker container to simplify deployement
       - ./services/openldap:/bitnami/openldap/
+    ports:
+      - '1389:1389'
+      - '1636:1636'
 
 ### Dolibarr
   database_dolibarr:
