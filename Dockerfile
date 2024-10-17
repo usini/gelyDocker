@@ -45,6 +45,7 @@ ENV PHP_INI_SCAN_DIR=":$PHP_INI_DIR/app.conf.d"
 ###> doctrine/doctrine-bundle ###
 RUN install-php-extensions pdo_mysql
 RUN install-php-extensions ldap
+RUN install-php-extensions calendar
 ###< doctrine/doctrine-bundle ###
 ###< recipes ###
 
